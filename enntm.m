@@ -1,12 +1,12 @@
 
- function tm = enntm(n_hid,n_ens,lat,h,y,m,d,t_mgtrop,ts,pw,enntm_weights)
+ function tm = enntm(n_hid,n_ens,lat,h,y,m,d,t_mgtrop,ts,pw)
 
 % enntm: Enhanced neural network model (ENNTm) for computing weighted mean temperature (Tm)
 % in GNSS meteorological applications.
 %
 % 
 % 
-% (c) School of Transportation, Southeast University, 16 January 2021.
+% (c) School of Transportation, Southeast University, 26 February 2021.
 % Author: Fengyang Long
 % 
 % 
@@ -31,7 +31,7 @@
 % ts       is the air temperature of the site in K. (scalar, indispensable for ENNTm-B and ENNTm-C)
 % pw     is the water vapor pressure of the site in hPa. (scalar, , indispensable for ENNTm-C)
 %           enntm_weights is the weight and bias values after training, A three
-%           dimensional matrix(10¡Á50¡Á3), enntm_weights(m,n,k), where m 
+%           dimensional matrix(10Ã—50Ã—3), enntm_weights(m,n,k), where m 
 %           BPNN structures, n traning missions, k (1. ENNTm-A; 2. ENNTm-B; 3.ENNTm-C).
 % 
 % 
@@ -44,22 +44,22 @@
 doy = date2doy(y,m,d);
 % -----------------------------------------------------------------
 % read the weights and bias values of ENNTm
-load('enntm_weights.mat');
-
+load('nntm20210116.mat'); % the ENNTm were trained from 16 January 2021.
+wbs = nntm20210116; % wbs = weight and bias values
 % -----------------------------------------------------------------
  % computing Tm with ENNTm 
-if nargin == 9
+if nargin == 8
     % ENNTm-A
     inputm = [h lat doy t_mgtrop]';
     tm_sum = 0;
     for i = 1:n_ens
-        inps       = enntm_weights(n_hid/5,i,1).inputps; % The normalized parameters    
-        oups      = enntm_weights(n_hid/5,i,1).outputps; %The inverse normalized parameters
+        inps       = wbs(n_hid/5,i,1).inputps; % The normalized parameters    
+        oups      = wbs(n_hid/5,i,1).outputps; %The inverse normalized parameters
 
-        b1         = enntm_weights(n_hid/5,i,1).weights.input_b; % The bias values from input to hidden
-        IW1_1   = enntm_weights(n_hid/5,i,1).weights.input_w; % The weights from input to hidden
-        b2         = enntm_weights(n_hid/5,i,1).weights.hidden_b;% The bias values from hidden to output
-        LW2_1  = enntm_weights(n_hid/5,i,1).weights.hidden_w;% The weights from hidden to output
+        b1         = wbs(n_hid/5,i,1).weights.input_b; % The bias values from input to hidden
+        IW1_1   = wbs(n_hid/5,i,1).weights.input_w; % The weights from input to hidden
+        b2         = wbs(n_hid/5,i,1).weights.hidden_b;% The bias values from hidden to output
+        LW2_1  = wbs(n_hid/5,i,1).weights.hidden_w;% The weights from hidden to output
 
         xn         = mapminmax('apply',inputm,inps);
         xh         = tansig_apply(repmat(b1,1,1)+IW1_1*xn);
@@ -68,18 +68,18 @@ if nargin == 9
         tm_sum = tm_sum + tm1;
     end
     tm = tm_sum/n_ens;
-elseif nargin == 10
+elseif nargin == 9
     % ENNTm-B
         inputm = [h lat doy t_mgtrop ts]';
         tm_sum = 0;
         for i = 1:n_ens
-            inps       = enntm_weights(n_hid/5,i,2).inputps; % The normalized parameters    
-            oups      = enntm_weights(n_hid/5,i,2).outputps; %The inverse normalized parameters
+            inps       = wbs(n_hid/5,i,2).inputps; % The normalized parameters    
+            oups      = wbs(n_hid/5,i,2).outputps; %The inverse normalized parameters
 
-            b1         = enntm_weights(n_hid/5,i,2).weights.input_b; % The bias values from input to hidden
-            IW1_1   = enntm_weights(n_hid/5,i,2).weights.input_w; % The weights from input to hidden
-            b2         = enntm_weights(n_hid/5,i,2).weights.hidden_b;% The bias values from hidden to output
-            LW2_1  = enntm_weights(n_hid/5,i,2).weights.hidden_w;% The weights from hidden to output
+            b1         = wbs(n_hid/5,i,2).weights.input_b; % The bias values from input to hidden
+            IW1_1   = wbs(n_hid/5,i,2).weights.input_w; % The weights from input to hidden
+            b2         = wbs(n_hid/5,i,2).weights.hidden_b;% The bias values from hidden to output
+            LW2_1  = wbs(n_hid/5,i,2).weights.hidden_w;% The weights from hidden to output
 
             xn         = mapminmax('apply',inputm,inps);
             xh         = tansig_apply(repmat(b1,1,1)+IW1_1*xn);
@@ -88,18 +88,18 @@ elseif nargin == 10
             tm_sum = tm_sum + tm1;
         end
         tm = tm_sum/n_ens;
-elseif nargin == 11
+elseif nargin == 10
     % ENNTm-C
         inputm = [h lat doy t_mgtrop ts pw]';
         tm_sum = 0;
         for i = 1:n_ens
-            inps       = enntm_weights(n_hid/5,i,3).inputps;    
-            oups      = enntm_weights(n_hid/5,i,3).outputps; 
+            inps       = wbs(n_hid/5,i,3).inputps;    
+            oups      = wbs(n_hid/5,i,3).outputps; 
 
-            b1         = enntm_weights(n_hid/5,i,3).weights.input_b;
-            IW1_1   = enntm_weights(n_hid/5,i,3).weights.input_w;
-            b2         = enntm_weights(n_hid/5,i,3).weights.hidden_b;
-            LW2_1  = enntm_weights(n_hid/5,i,3).weights.hidden_w;
+            b1         = wbs(n_hid/5,i,3).weights.input_b;
+            IW1_1   = wbs(n_hid/5,i,3).weights.input_w;
+            b2         = wbs(n_hid/5,i,3).weights.hidden_b;
+            LW2_1  = wbs(n_hid/5,i,3).weights.hidden_w;
 
             xn         = mapminmax('apply',inputm,inps);
             xh         = tansig_apply(repmat(b1,1,1)+IW1_1*xn);
@@ -124,4 +124,3 @@ end
 function a = tansig_apply(n,~)
 a = 2 ./ (1 + exp(-2*n)) - 1;
 end
-
